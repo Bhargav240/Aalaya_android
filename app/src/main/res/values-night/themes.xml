@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark mode's window background must match Compose's canvas (#000000),
+         otherwise the pre-Compose frame flashes light before the first
+         composition lands. -->
+    <style name="Theme.Aalaya" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/hv_bg_dark</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

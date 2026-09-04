@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- A bare DayNight base; the real theming lives in Compose (HamsaTheme).
+         The activity calls enableEdgeToEdge() and HamsaTheme drives the
+         status/navigation bar icon contrast, so the bars stay transparent here
+         rather than being pinned to a brand colour — otherwise the XML theme
+         and the Compose theme fight over them and dark mode flashes the wrong
+         background on cold start. -->
+    <style name="Theme.Aalaya" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/hv_bg_subtle</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- Launch/splash theme (androidx core-splashscreen). Swaps to the app theme
+         once the first frame is ready. -->
+    <style name="Theme.Aalaya.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/hv_brand_primary</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Aalaya</item>
+    </style>
+</resources>

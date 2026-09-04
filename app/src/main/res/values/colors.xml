@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Only the few colors the platform (window background, splash) needs as
+         XML. The full palette lives in Compose: ui/theme/Color.kt -->
+    <color name="hv_brand_primary">#0E70C7</color>
+    <color name="hv_bg_subtle">#F2F6F8</color>
+    <!-- Dark mode is the design's flat near-black, not a tinted navy. -->
+    <color name="hv_bg_dark">#000000</color>
+</resources>
