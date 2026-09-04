@@ -1,5 +1,6 @@
 package com.aalaya.pg.feature.payments
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aalaya.pg.core.common.ApiResult
@@ -48,6 +49,7 @@ data class ResidentDue(
     val bedLabel: String? = null,
 )
 
+@Immutable
 data class PaymentsUiState(
     val loading: Boolean = true,
     val error: String? = null,

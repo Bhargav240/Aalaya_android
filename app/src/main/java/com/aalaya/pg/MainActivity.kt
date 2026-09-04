@@ -2,6 +2,9 @@ package com.aalaya.pg
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.viewModels
+import com.aalaya.pg.core.data.AuthState
+import com.aalaya.pg.feature.main.AppViewModel
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -21,9 +24,14 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private val appViewModel: AppViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Must be called before super.onCreate to hand off from the launch theme.
-        installSplashScreen()
+        val splashScreen = installSplashScreen()
+        splashScreen.setKeepOnScreenCondition {
+            appViewModel.authState.value is AuthState.Loading
+        }
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {

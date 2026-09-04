@@ -68,10 +68,9 @@ class SessionManager @Inject constructor(
     }
 
     private suspend fun bootstrapInternal() {
-        tokenStore.primeAccessToken()
-        val identity = tokenStore.identity()
-        _state.value = if (identity != null && tokenStore.refreshToken() != null) {
-            AuthState.Authenticated(identity)
+        val bootstrap = tokenStore.hydrateBootstrap()
+        _state.value = if (bootstrap.identity != null && bootstrap.refreshToken != null) {
+            AuthState.Authenticated(bootstrap.identity)
         } else {
             AuthState.Unauthenticated
         }

@@ -12,6 +12,12 @@ import javax.inject.Singleton
 
 private val Context.authDataStore by preferencesDataStore(name = "hamsa_auth")
 
+data class AuthBootstrap(
+    val accessToken: String?,
+    val refreshToken: String?,
+    val identity: UserSession?,
+)
+
 /**
  * Persists the access + refresh tokens. Backed by DataStore (async, corruption-safe).
  * The tokens are opaque JWTs the backend issues; we never decode them client-side
@@ -43,6 +49,35 @@ class TokenStore @Inject constructor(
      * during the initial prime or a concurrent rotation — safe because requests
      * issued before priming simply go out unauthenticated and get retried. */
     fun peekAccessToken(): String? = cachedAccessToken
+
+    /** Hydrate access, refresh token, and identity in a single DataStore read for fast startup. */
+    suspend fun hydrateBootstrap(): AuthBootstrap {
+        val prefs = context.authDataStore.data.first()
+        val access = prefs[accessKey]
+        val refresh = prefs[refreshKey]
+        cachedAccessToken = access
+        cachePrimed = true
+        val userId = prefs[userIdKey]
+        val orgId = prefs[orgIdKey]
+        val roleWire = prefs[roleKey]
+        val identity = if (userId != null && orgId != null && roleWire != null) {
+            Role.fromWire(roleWire)?.let { role ->
+                UserSession(
+                    userId = userId,
+                    orgId = orgId,
+                    role = role,
+                    branchId = prefs[branchIdKey],
+                    fullName = prefs[fullNameKey],
+                    verified = prefs[verifiedKey] != "false",
+                )
+            }
+        } else null
+        return AuthBootstrap(
+            accessToken = access,
+            refreshToken = refresh,
+            identity = identity,
+        )
+    }
 
     /** Prime the in-memory snapshot from disk once per process. Idempotent. */
     suspend fun primeAccessToken() {

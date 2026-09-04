@@ -1,6 +1,7 @@
 package com.aalaya.pg.feature.tenant
 
 import android.net.Uri
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aalaya.pg.core.common.ApiResult
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+@Immutable
 data class TenantHomeUiState(
     val loading: Boolean = true,
     val ledger: LedgerDto? = null,

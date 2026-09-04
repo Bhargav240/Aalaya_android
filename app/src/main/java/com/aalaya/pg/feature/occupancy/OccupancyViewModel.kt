@@ -1,5 +1,6 @@
 package com.aalaya.pg.feature.occupancy
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aalaya.pg.core.common.ApiResult
@@ -51,6 +52,7 @@ data class ResidentSheetState(
     val ledger: LedgerDto? = null,
 )
 
+@Immutable
 data class OccupancyUiState(
     val loading: Boolean = true,
     val error: String? = null,

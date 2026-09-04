@@ -1,6 +1,9 @@
 package com.aalaya.pg.feature.dashboard
 
 import com.aalaya.pg.core.common.ApiResult
+import com.aalaya.pg.core.data.ApiCache
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import com.aalaya.pg.core.domain.model.Floors
 import com.aalaya.pg.core.network.dto.BedDto
 import com.aalaya.pg.core.network.dto.RoomDto
@@ -15,6 +18,7 @@ import kotlinx.coroutines.coroutineScope
  * One row of the home screen's room summary: total available beds for a given
  * sharing type right now.
  */
+@Serializable
 data class RoomSummaryRow(
     val sharingCount: Int,
     val vacantCount: Int,
@@ -73,7 +77,14 @@ data class RoomScope(
 @Singleton
 class RoomAvailabilityRepository @Inject constructor(
     private val branches: BranchRepository,
+    private val cache: ApiCache,
 ) {
+
+    suspend fun cachedSummary(branchIds: List<String>): List<RoomSummaryRow>? {
+        if (branchIds.isEmpty()) return null
+        val key = "room_summary_" + branchIds.sorted().joinToString("_")
+        return cache.read(key, ListSerializer(RoomSummaryRow.serializer()), maxAgeMillis = 10 * 60 * 1000L)
+    }
 
     /** Vacant-room counts per sharing type, summed across [branchIds]. */
     suspend fun summary(branchIds: List<String>): ApiResult<List<RoomSummaryRow>> {
@@ -96,6 +107,8 @@ class RoomAvailabilityRepository @Inject constructor(
             .filterValues { it > 0 }
             .map { (sharing, count) -> RoomSummaryRow(sharing, count) }
             .sortedWith(compareByDescending<RoomSummaryRow> { it.vacantCount }.thenBy { it.sharingCount })
+        val key = "room_summary_" + branchIds.sorted().joinToString("_")
+        cache.write(key, ListSerializer(RoomSummaryRow.serializer()), rows)
         return ApiResult.Success(rows)
     }
 

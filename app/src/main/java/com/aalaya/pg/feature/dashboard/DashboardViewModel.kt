@@ -1,5 +1,6 @@
 package com.aalaya.pg.feature.dashboard
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aalaya.pg.core.common.ApiResult
@@ -11,14 +12,16 @@ import com.aalaya.pg.core.network.dto.BranchDto
 import com.aalaya.pg.feature.approvals.ApprovalRepository
 import com.aalaya.pg.feature.branches.BranchRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@Immutable
 data class DashboardUiState(
     val loading: Boolean = true,
     val error: String? = null,
@@ -44,11 +47,9 @@ data class DashboardUiState(
 /**
  * Staff home.
  *
- * Home used to lead with money — outstanding, collected, occupancy, complaints.
- * Those numbers each have a screen of their own (Payments, Occupancy,
- * Complaints), so repeating them here made the first screen a summary of other
- * screens. It now answers the one question that has no home elsewhere: *what
- * can I offer someone who walks in today?* — free rooms by sharing type.
+ * Answers what can be offered to walk-in tenants today: free rooms by sharing type.
+ * Optimized with immediate in-memory/disk cache seeding (0ms initial render) and
+ * resilient background revalidation.
  */
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
@@ -62,7 +63,51 @@ class DashboardViewModel @Inject constructor(
     private val _state = MutableStateFlow(DashboardUiState())
     val state: StateFlow<DashboardUiState> = _state.asStateFlow()
 
-    init { refresh(); observeScope() }
+    private var refreshJob: Job? = null
+
+    init {
+        val initialSession = (sessionManager.state.value as? AuthState.Authenticated)?.session
+        val initialIsOwner = initialSession?.role?.canApprove == true
+        _state.update { it.copy(canApprove = initialIsOwner) }
+
+        viewModelScope.launch {
+            seedFromCache(initialSession?.role, initialSession?.branchId)
+            refresh()
+        }
+        observeScope()
+    }
+
+    /**
+     * Seed state from cache for instantaneous (0ms) first frame render.
+     */
+    private suspend fun seedFromCache(role: Role?, sessionBranchId: String?) {
+        val cachedBranches = branchRepo.cachedBranches()
+        if (!cachedBranches.isNullOrEmpty()) {
+            branchContext.setBranches(cachedBranches)
+            val selectedId = branchContext.selected.value?.id ?: cachedBranches.firstOrNull()?.id
+            _state.update {
+                it.copy(
+                    branches = cachedBranches,
+                    scopedBranchId = selectedId,
+                )
+            }
+        }
+        val scope = resolveScope(role, sessionBranchId)
+        if (scope.branchIds.isNotEmpty()) {
+            val cachedSummary = roomAvailability.cachedSummary(scope.branchIds)
+            if (cachedSummary != null) {
+                _state.update {
+                    it.copy(
+                        loading = false,
+                        roomSummary = cachedSummary,
+                        roomSummaryLoading = false,
+                        roomScopeBranchIds = scope.branchIds,
+                        roomScopeLabel = scope.label,
+                    )
+                }
+            }
+        }
+    }
 
     /**
      * Owner scope switch. Writes through to the shared context so Occupancy
@@ -79,39 +124,39 @@ class DashboardViewModel @Inject constructor(
     private fun observeScope() {
         viewModelScope.launch {
             branchContext.selected.collect { selection ->
-                if (_state.value.scopedBranchId == selection?.id) return@collect
+                val currentScope = _state.value.scopedBranchId
+                if (currentScope == selection?.id) return@collect
                 _state.update { it.copy(scopedBranchId = selection?.id) }
-                refresh()
+                val session = (sessionManager.state.value as? AuthState.Authenticated)?.session
+                loadRoomSummary(session?.role, session?.branchId)
             }
         }
     }
 
     fun refresh() {
-        _state.update {
-            it.copy(
-                loading = true,
-                error = null,
-                roomSummaryLoading = it.roomSummary.isEmpty(),
-                roomSummaryError = null,
-            )
-        }
-        viewModelScope.launch {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
             val session = (sessionManager.state.value as? AuthState.Authenticated)?.session
             val isOwner = session?.role?.canApprove == true
-            _state.update { it.copy(canApprove = isOwner) }
-
-            // Branches and the approval badge do not depend on one another.
-            // Starting both now removes a complete network round trip from the
-            // owner Home screen's first paint.
-            val branchesDeferred = if (isOwner && _state.value.branches.isEmpty()) {
-                async { branchRepo.branches() }
-            } else {
-                null
+            _state.update {
+                it.copy(
+                    canApprove = isOwner,
+                    loading = it.roomSummary.isEmpty() && it.branches.isEmpty(),
+                    error = null,
+                    roomSummaryLoading = it.roomSummary.isEmpty(),
+                    roomSummaryError = null,
+                )
             }
-            val approvalsDeferred = if (isOwner) async { approvalRepo.pending() } else null
 
-            // Owners get the branch list so Home can scope itself; managers are
-            // already pinned to their own branch.
+            val branchesDeferred = if (isOwner) {
+                async { branchRepo.branches() }
+            } else null
+
+            val approvalsDeferred = if (isOwner) {
+                async { approvalRepo.pending() }
+            } else null
+
+            // Stream branches as soon as they complete
             branchesDeferred?.await()?.let { result ->
                 (result as? ApiResult.Success)?.let { r ->
                     branchContext.setBranches(r.data)
@@ -124,8 +169,7 @@ class DashboardViewModel @Inject constructor(
                 }
             }
 
-            // The approvals count only tints a tile, so a failure must never
-            // blank the screen — it simply leaves the count at zero.
+            // Stream approvals as soon as they complete
             if (approvalsDeferred != null) {
                 (approvalsDeferred.await() as? ApiResult.Success)?.let { res ->
                     _state.update { it.copy(pendingApprovals = res.data.size) }
@@ -141,7 +185,23 @@ class DashboardViewModel @Inject constructor(
     private suspend fun loadRoomSummary(role: Role?, sessionBranchId: String?) {
         val scope = resolveScope(role, sessionBranchId)
         _state.update {
-            it.copy(roomScopeBranchIds = scope.branchIds, roomScopeLabel = scope.label)
+            it.copy(
+                roomScopeBranchIds = scope.branchIds,
+                roomScopeLabel = scope.label,
+                roomSummaryLoading = it.roomSummary.isEmpty(),
+            )
+        }
+
+        if (_state.value.roomSummary.isEmpty() && scope.branchIds.isNotEmpty()) {
+            val cached = roomAvailability.cachedSummary(scope.branchIds)
+            if (cached != null) {
+                _state.update {
+                    it.copy(
+                        roomSummary = cached,
+                        roomSummaryLoading = false,
+                    )
+                }
+            }
         }
 
         when (val result = roomAvailability.summary(scope.branchIds)) {
@@ -156,9 +216,8 @@ class DashboardViewModel @Inject constructor(
             is ApiResult.Failure -> _state.update {
                 it.copy(
                     loading = false,
-                    roomSummary = emptyList(),
                     roomSummaryLoading = false,
-                    roomSummaryError = result.error.message,
+                    roomSummaryError = if (it.roomSummary.isEmpty()) result.error.message else null,
                 )
             }
         }
@@ -166,10 +225,6 @@ class DashboardViewModel @Inject constructor(
 
     /**
      * Which branches the room figures cover.
-     *
-     * A manager only ever sees their own branch. An owner sees whichever branch
-     * they picked; before they pick, the first branch stands in so Home opens
-     * with real numbers rather than an empty prompt.
      */
     private fun resolveScope(role: Role?, sessionBranchId: String?): RoomScope {
         val state = _state.value
