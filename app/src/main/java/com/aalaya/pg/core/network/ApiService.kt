@@ -236,7 +236,7 @@ interface ApiService {
 
     // ── Maker-checker ─────────────────────────────────────────────────────────
     @GET("change-requests")
-    suspend fun changeRequests(): List<ChangeRequestDto>
+    suspend fun changeRequests(@Query("status") status: String? = null): List<ChangeRequestDto>
 
     @POST("change-requests/{id}/approve")
     suspend fun approveChange(@Path("id") id: String): StatusResponse

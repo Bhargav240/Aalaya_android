@@ -106,7 +106,6 @@ fun OccupancyScreen(
     var newRoomBeds by remember { mutableStateOf(2) }
     var freeOnly by remember { mutableStateOf(false) }
     var sharingFilter by remember { mutableStateOf(0) }
-    var coolingFilter by remember { mutableStateOf("all") }
     var registerTarget by remember { mutableStateOf<Triple<String, String, RegisterForm>?>(null) }
     /** Room id currently showing the "Add bed" dialog, if any. */
     var addBedTarget by remember { mutableStateOf<String?>(null) }
@@ -146,7 +145,6 @@ fun OccupancyScreen(
     }
 
     val visibleRooms = roomsOnFloor
-        .filter { coolingFilter == "all" || it.coolingType == coolingFilter }
         .filter { roomMatches(it) && sharingMatches(it) }
 
     // Occupancy counts only cover rooms whose beds have been loaded.
@@ -247,20 +245,6 @@ fun OccupancyScreen(
                         (1..4).forEach { n ->
                             SelectableChip("$n-share", sharingFilter == n, onClick = { sharingFilter = n })
                         }
-                    }
-                }
-            }
-
-            item("cooling") {
-                Column {
-                    FieldLabel("Room type")
-                    FlowRow(
-                        modifier = Modifier.padding(top = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(HamsaTheme.spacing.sm),
-                    ) {
-                        SelectableChip("Any", coolingFilter == "all", onClick = { coolingFilter = "all" })
-                        SelectableChip("AC", coolingFilter == "ac", onClick = { coolingFilter = "ac" })
-                        SelectableChip("Non-AC", coolingFilter == "non_ac", onClick = { coolingFilter = "non_ac" })
                     }
                 }
             }

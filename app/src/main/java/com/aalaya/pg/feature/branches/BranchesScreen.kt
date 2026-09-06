@@ -55,7 +55,7 @@ fun BranchesScreen(
     // Managers may REQUEST edits/deletes (maker-checker); creating is owner-only.
     canEdit: Boolean = canManage,
     onOpenBranch: (branchId: String, name: String) -> Unit,
-    onAddBranch: () -> Unit,
+    onAddBranch: () -> Unit = {},
     onBack: () -> Unit = {},
     viewModel: BranchesViewModel = hiltViewModel(),
 ) {
@@ -70,15 +70,6 @@ fun BranchesScreen(
     HamsaTopBar(
         title = "Branches",
         onBack = onBack,
-        actions = {
-            if (canManage) {
-                PrimaryButton(
-                    text = "Add branch",
-                    onClick = onAddBranch,
-                    size = ButtonSize.Small,
-                )
-            }
-        },
     )
     Scaffold(
         containerColor = HamsaTheme.colors.canvas,
@@ -90,11 +81,7 @@ fun BranchesScreen(
                 state.branches.isEmpty() -> HamsaCard(modifier = Modifier.fillMaxWidth()) {
                     EmptyState(
                         title = "No branches yet",
-                        detail = if (canManage) {
-                            "Add your first branch to start tracking rooms and residents."
-                        } else {
-                            "Your owner hasn't added any branches yet."
-                        },
+                        detail = "No branches found for your organization.",
                         icon = Icons.Outlined.Apartment,
                     )
                 }

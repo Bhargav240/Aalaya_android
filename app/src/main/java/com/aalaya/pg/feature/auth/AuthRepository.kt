@@ -42,8 +42,20 @@ class AuthRepository @Inject constructor(
     // actually checked.
     private fun normalizedEmail(email: String) = email.trim().lowercase()
 
-    suspend fun requestOtp(email: String): ApiResult<Unit> =
-        when (val r = executor.execute { api.requestEmailOtp(RequestEmailOtpRequest(normalizedEmail(email))) }) {
+    suspend fun requestOtp(
+        email: String,
+        fullName: String? = null,
+        phone: String? = null,
+    ): ApiResult<Unit> =
+        when (val r = executor.execute {
+            api.requestEmailOtp(
+                RequestEmailOtpRequest(
+                    email = normalizedEmail(email),
+                    fullName = fullName?.trim()?.takeIf { it.isNotEmpty() },
+                    phone = phone?.trim()?.takeIf { it.isNotEmpty() },
+                )
+            )
+        }) {
             is ApiResult.Success -> ApiResult.Success(Unit)
             is ApiResult.Failure -> r
         }
@@ -53,13 +65,20 @@ class AuthRepository @Inject constructor(
      * whether the account is [AuthOutcome.isVerified] and whether this sign-in
      * is on a previously-unseen device ([AuthOutcome.isNewDevice]).
      */
-    suspend fun verifyOtp(email: String, code: String): ApiResult<AuthOutcome> =
+    suspend fun verifyOtp(
+        email: String,
+        code: String,
+        fullName: String? = null,
+        phone: String? = null,
+    ): ApiResult<AuthOutcome> =
         when (
             val r = executor.execute {
                 api.verifyEmailOtp(
                     VerifyEmailOtpRequest(
                         email = normalizedEmail(email),
                         code = code.trim(),
+                        fullName = fullName?.trim()?.takeIf { it.isNotEmpty() },
+                        phone = phone?.trim()?.takeIf { it.isNotEmpty() },
                     ),
                 )
             }

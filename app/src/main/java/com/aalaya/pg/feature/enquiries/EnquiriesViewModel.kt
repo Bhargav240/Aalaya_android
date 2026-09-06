@@ -51,12 +51,21 @@ class EnquiriesViewModel @Inject constructor(
             when (val r = repo.setStatus(enquiry.id, status)) {
                 is ApiResult.Success -> {
                     _state.update { s ->
-                        s.copy(
-                            updatingId = null,
-                            enquiries = s.enquiries.map { if (it.id == enquiry.id) it.copy(status = status) else it },
-                        )
+                        // When closed: remove from the active list immediately.
+                        // When contacted (or any other active status): update in place.
+                        val updated = if (status == "closed") {
+                            s.enquiries.filter { it.id != enquiry.id }
+                        } else {
+                            s.enquiries.map { if (it.id == enquiry.id) it.copy(status = status) else it }
+                        }
+                        s.copy(updatingId = null, enquiries = updated)
                     }
-                    snackbar.show(if (status == "contacted") "Marked as contacted." else "Enquiry closed.")
+                    val message = when (status) {
+                        "closed" -> "Enquiry closed and removed from inbox."
+                        "contacted" -> "Marked as contacted — still visible for follow-ups."
+                        else -> "Status updated."
+                    }
+                    snackbar.show(message)
                 }
                 is ApiResult.Failure -> {
                     _state.update { it.copy(updatingId = null) }

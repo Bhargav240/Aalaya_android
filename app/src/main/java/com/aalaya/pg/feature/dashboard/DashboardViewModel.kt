@@ -13,6 +13,7 @@ import com.aalaya.pg.feature.approvals.ApprovalRepository
 import com.aalaya.pg.feature.branches.BranchRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +25,7 @@ import javax.inject.Inject
 @Immutable
 data class DashboardUiState(
     val loading: Boolean = true,
+    val refreshing: Boolean = false,
     val error: String? = null,
     val canApprove: Boolean = false,
     /** Change requests awaiting the owner's yes — tints the Approvals tile. */
@@ -141,6 +143,7 @@ class DashboardViewModel @Inject constructor(
             _state.update {
                 it.copy(
                     canApprove = isOwner,
+                    refreshing = true,
                     loading = it.roomSummary.isEmpty() && it.branches.isEmpty(),
                     error = null,
                     roomSummaryLoading = it.roomSummary.isEmpty(),
@@ -148,37 +151,49 @@ class DashboardViewModel @Inject constructor(
                 )
             }
 
-            val branchesDeferred = if (isOwner) {
-                async { branchRepo.branches() }
-            } else null
+            try {
+                val branchesDeferred = if (isOwner) {
+                    async { branchRepo.branches() }
+                } else null
 
-            val approvalsDeferred = if (isOwner) {
-                async { approvalRepo.pending() }
-            } else null
+                val approvalsDeferred = if (isOwner) {
+                    async { approvalRepo.pending() }
+                } else null
 
-            // Stream branches as soon as they complete
-            branchesDeferred?.await()?.let { result ->
-                (result as? ApiResult.Success)?.let { r ->
-                    branchContext.setBranches(r.data)
-                    _state.update {
-                        it.copy(
-                            branches = r.data,
-                            scopedBranchId = branchContext.selected.value?.id,
-                        )
+                // Stream branches as soon as they complete
+                branchesDeferred?.await()?.let { result ->
+                    (result as? ApiResult.Success)?.let { r ->
+                        branchContext.setBranches(r.data)
+                        _state.update {
+                            it.copy(
+                                branches = r.data,
+                                scopedBranchId = branchContext.selected.value?.id,
+                            )
+                        }
                     }
                 }
-            }
 
-            // Stream approvals as soon as they complete
-            if (approvalsDeferred != null) {
-                (approvalsDeferred.await() as? ApiResult.Success)?.let { res ->
-                    _state.update { it.copy(pendingApprovals = res.data.size) }
+                // Stream approvals as soon as they complete
+                if (approvalsDeferred != null) {
+                    (approvalsDeferred.await() as? ApiResult.Success)?.let { res ->
+                        _state.update { it.copy(pendingApprovals = res.data.size) }
+                    }
+                } else {
+                    _state.update { it.copy(pendingApprovals = 0) }
                 }
-            } else {
-                _state.update { it.copy(pendingApprovals = 0) }
-            }
 
-            loadRoomSummary(session?.role, session?.branchId)
+                loadRoomSummary(session?.role, session?.branchId)
+                // Brief yield so Compose PullToRefresh indicator registers active refresh state cleanly
+                delay(200)
+            } finally {
+                _state.update {
+                    it.copy(
+                        refreshing = false,
+                        loading = false,
+                        roomSummaryLoading = false,
+                    )
+                }
+            }
         }
     }
 

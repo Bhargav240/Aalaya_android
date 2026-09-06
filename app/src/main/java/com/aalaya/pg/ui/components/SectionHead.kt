@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,6 +20,7 @@ import com.aalaya.pg.ui.theme.HamsaTheme
 fun SectionHead(
     title: String,
     modifier: Modifier = Modifier,
+    style: TextStyle = HamsaTheme.type.titleMedium,
     trailing: @Composable (() -> Unit)? = null,
 ) {
     Row(
@@ -30,7 +32,7 @@ fun SectionHead(
     ) {
         Text(
             text = title,
-            style = HamsaTheme.type.titleMedium,
+            style = style,
             color = HamsaTheme.colors.textPrimary,
         )
         trailing?.invoke()

@@ -51,7 +51,7 @@ import com.aalaya.pg.ui.theme.HamsaTheme
  * today?* — and then gets out of the way:
  *
  *   1. Greeting      — who is looking
- *   2. Quick actions — the destinations that are not bottom-nav tabs
+ *   2. Quick Actions — the destinations that are not bottom-nav tabs
  *   3. Room summary  — free rooms by sharing type, tappable for the room list
  *
  * Money used to lead this screen (outstanding, collected, occupancy, open
@@ -76,7 +76,7 @@ fun StaffDashboardScreen(
         // Tenant Home already leads with its greeting the same way.
         title = "",
         showTopBar = false,
-        refreshing = state.loading,
+        refreshing = state.refreshing,
         onRefresh = viewModel::refresh,
     ) {
         item("greeting") {
@@ -184,7 +184,7 @@ private fun QuickActions(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(HamsaTheme.spacing.sm)) {
-        SectionHead("Quick actions")
+        SectionHead("Quick Actions")
         actions.chunked(3).forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),

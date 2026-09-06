@@ -39,6 +39,7 @@ object Routes {
     const val COMPLAINTS = "complaints"
     const val NOTICES = "notices"
     const val APPROVALS = "approvals"
+    const val CHANGE_PIN = "change-pin"
     const val AUDIT = "audit"
     const val TEMPLATE = "receipt-template"
     const val HELP = "help"

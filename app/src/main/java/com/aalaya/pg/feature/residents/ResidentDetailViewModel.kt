@@ -154,15 +154,24 @@ class ResidentDetailViewModel @Inject constructor(
     fun clearSettlement() = _state.update { it.copy(settlement = null) }
 
     /** Maker-checker edit: owners apply instantly; managers queue for approval. */
-    fun editResident(fullName: String, phone: String, plan: PlanKind?, onDone: () -> Unit) {
+    fun editResident(
+        fullName: String,
+        phone: String,
+        plan: PlanKind?,
+        rentRupees: String,
+        depositRupees: String,
+        onDone: () -> Unit,
+    ) {
         if (_state.value.editing) return
-        if (fullName.isBlank() && phone.isBlank() && plan == null) {
+        val rentPaise = Money.parseRupeesToPaise(rentRupees)
+        val depositPaise = Money.parseRupeesToPaise(depositRupees)
+        if (fullName.isBlank() && phone.isBlank() && plan == null && rentPaise == null && depositPaise == null) {
             _state.update { it.copy(editError = "Nothing to change.") }
             return
         }
         _state.update { it.copy(editing = true, editError = null) }
         viewModelScope.launch {
-            when (val r = repo.update(residentId, fullName, phone, plan)) {
+            when (val r = repo.update(residentId, fullName, phone, plan, rentPaise, depositPaise)) {
                 is ApiResult.Success -> {
                     _state.update { it.copy(editing = false) }
                     snackbar.show(
@@ -201,3 +210,4 @@ class ResidentDetailViewModel @Inject constructor(
     }
 
 }
+

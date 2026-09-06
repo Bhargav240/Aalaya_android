@@ -73,25 +73,6 @@ fun RoomAvailabilityScreen(
             }
 
             else -> {
-                item("header") {
-                    HamsaCard(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(HamsaTheme.spacing.md),
-                            verticalAlignment = Alignment.Top,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = scopeLabel,
-                                    style = HamsaTheme.type.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                    color = colors.textPrimary,
-                                )
-                            }
-                            StatusChip(label = state.totalLabel, tone = StatusTone.Success)
-                        }
-                    }
-                }
-
                 val byBranch = state.rooms.groupBy { it.branchName }
                 byBranch.keys.sorted().forEach { branchName ->
                     val branchRooms = byBranch[branchName].orEmpty()
@@ -193,3 +174,4 @@ private fun RoomCard(room: VacantRoomItem) {
         }
     }
 }
+

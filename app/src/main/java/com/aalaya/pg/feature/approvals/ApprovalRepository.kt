@@ -14,7 +14,14 @@ class ApprovalRepository @Inject constructor(
     private val api: ApiService,
     private val executor: NetworkExecutor,
 ) {
-    suspend fun pending(): ApiResult<List<ChangeRequestDto>> = executor.execute { api.changeRequests() }
-    suspend fun approve(id: String): ApiResult<Unit> = executor.execute { api.approveChange(id) }.toUnit()
-    suspend fun reject(id: String): ApiResult<Unit> = executor.execute { api.rejectChange(id) }.toUnit()
+    suspend fun listChanges(status: String? = null): ApiResult<List<ChangeRequestDto>> =
+        executor.execute { api.changeRequests(status) }
+
+    suspend fun pending(): ApiResult<List<ChangeRequestDto>> = listChanges("all")
+
+    suspend fun approve(id: String): ApiResult<Unit> =
+        executor.execute { api.approveChange(id) }.toUnit()
+
+    suspend fun reject(id: String): ApiResult<Unit> =
+        executor.execute { api.rejectChange(id) }.toUnit()
 }

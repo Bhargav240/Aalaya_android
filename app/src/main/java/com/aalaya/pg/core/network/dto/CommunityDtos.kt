@@ -116,6 +116,8 @@ data class EnquiryDto(
     val note: String? = null,
     val status: String,
     val createdAtEpoch: Long,
+    val prospectName: String? = null,
+    val email: String? = null,
 )
 
 @Serializable
@@ -124,6 +126,7 @@ data class EnquiryStatusRequest(val status: String)
 @Serializable
 data class EnquireRequest(
     val note: String? = null,
+    val phone: String? = null,
 )
 
 @Serializable

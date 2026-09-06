@@ -2,6 +2,7 @@ package com.aalaya.pg.core.network.dto
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
+import kotlinx.serialization.json.JsonElement
 
 // Payments, receipts, ledgers, finance reports, change-requests.
 
@@ -94,6 +95,14 @@ data class ChangeRequestDto(
     val operation: String,
     val status: String,
     val requestedBy: String,
+    val entityName: String? = null,
+    val requestedByName: String? = null,
+    val description: String? = null,
+    val proposed: JsonElement? = null,
+    val createdAt: String? = null,
+    val decidedAt: String? = null,
+    val decidedBy: String? = null,
+    val decidedByName: String? = null,
 )
 
 /** One resident's rollup row from GET /branches/{id}/dues (A7 batch endpoint). */

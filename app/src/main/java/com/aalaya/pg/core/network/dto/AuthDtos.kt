@@ -16,12 +16,16 @@ data class ProvisionRequest(
 @Serializable
 data class RequestEmailOtpRequest(
     val email: String,
+    val fullName: String? = null,
+    val phone: String? = null,
 )
 
 @Serializable
 data class VerifyEmailOtpRequest(
     val email: String,
     val code: String,
+    val fullName: String? = null,
+    val phone: String? = null,
 )
 
 @Serializable

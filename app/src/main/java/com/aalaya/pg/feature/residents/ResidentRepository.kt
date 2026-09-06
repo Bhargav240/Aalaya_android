@@ -73,6 +73,8 @@ class ResidentRepository @Inject constructor(
         fullName: String?,
         phone: String?,
         plan: PlanKind?,
+        rentPaise: Long? = null,
+        depositPaise: Long? = null,
     ): ApiResult<ChangeResponse> = executor.execute {
         api.updateResident(
             residentId,
@@ -80,6 +82,8 @@ class ResidentRepository @Inject constructor(
                 fullName = fullName?.trim()?.ifBlank { null },
                 phone = phone?.trim()?.ifBlank { null },
                 planKind = plan?.wire,
+                rentPaise = rentPaise,
+                depositPaise = depositPaise,
             ),
         )
     }
@@ -145,3 +149,4 @@ class ResidentRepository @Inject constructor(
         )
     }
 }
+

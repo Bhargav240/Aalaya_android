@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -77,7 +78,7 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
         )
         Text(
             text = when {
-                state.otpSent -> "Enter the 6-digit code sent to ${state.email}."
+                state.otpSent -> "Enter the code sent to ${state.email}"
                 signingUp -> "We'll email you a one-time code to get started. No password to remember."
                 else -> "We'll email you a one-time code to sign in."
             },
@@ -89,6 +90,23 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
         Spacer(Modifier.height(HamsaTheme.spacing.xxl))
 
         if (!state.otpSent) {
+            if (signingUp) {
+                HamsaTextField(
+                    value = state.fullName,
+                    onValueChange = viewModel::onFullName,
+                    label = "Full name",
+                    placeholder = "Your full name",
+                )
+                Spacer(Modifier.height(HamsaTheme.spacing.md))
+                HamsaTextField(
+                    value = state.phone,
+                    onValueChange = viewModel::onPhone,
+                    label = "Phone number",
+                    placeholder = "10-digit mobile number",
+                    keyboardType = KeyboardType.Phone,
+                )
+                Spacer(Modifier.height(HamsaTheme.spacing.md))
+            }
             HamsaTextField(
                 value = state.email,
                 onValueChange = viewModel::onEmail,
@@ -107,22 +125,34 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
             }
             Spacer(Modifier.height(HamsaTheme.spacing.md))
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(top = HamsaTheme.spacing.xs),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (state.resendSecondsLeft > 0) {
+                    val minutes = state.resendSecondsLeft / 60
+                    val seconds = state.resendSecondsLeft % 60
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Resend Code in ",
+                            style = HamsaTheme.type.labelMedium,
+                            color = colors.textSecondary,
+                        )
+                        Text(
+                            text = String.format("%02d:%02d", minutes, seconds),
+                            style = HamsaTheme.type.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = colors.textPrimary,
+                        )
+                    }
+                } else {
+                    GhostButton(
+                        text = "Resend Code",
+                        onClick = viewModel::resend,
+                    )
+                }
                 GhostButton(
                     text = "Change email",
                     onClick = viewModel::changeEmail,
-                )
-                GhostButton(
-                    text = if (state.resendSecondsLeft > 0) {
-                        "Resend in ${state.resendSecondsLeft}s"
-                    } else {
-                        "Resend code"
-                    },
-                    onClick = viewModel::resend,
-                    enabled = state.resendSecondsLeft <= 0,
                 )
             }
         }

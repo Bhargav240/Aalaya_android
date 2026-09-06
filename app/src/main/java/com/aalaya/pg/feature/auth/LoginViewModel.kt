@@ -30,6 +30,8 @@ data class LoginUiState(
     val step: AuthStep = AuthStep.Welcome,
     val intent: AuthIntent = AuthIntent.LogIn,
     val email: String = "",
+    val fullName: String = "",
+    val phone: String = "",
     val otpCode: String = "",
     val otpSent: Boolean = false,
     val resendSecondsLeft: Int = 0,
@@ -39,7 +41,15 @@ data class LoginUiState(
     val isVerified: Boolean = true,
 ) {
     val canSubmit: Boolean
-        get() = if (!otpSent) email.contains('@') && email.substringAfter('@').contains('.') else otpCode.length == 6
+        get() {
+            if (otpSent) return otpCode.length == 6
+            val emailValid = email.contains('@') && email.substringAfter('@').contains('.')
+            if (intent == AuthIntent.SignUp) {
+                val phoneDigits = phone.filter { it.isDigit() }
+                return emailValid && (phone.isBlank() || phoneDigits.length >= 10)
+            }
+            return emailValid
+        }
 }
 
 @HiltViewModel
@@ -52,15 +62,11 @@ class LoginViewModel @Inject constructor(
 
     private var cooldownJob: Job? = null
 
-    // The in-flight sendOtp()/verifyOtp() call, if any. Without tracking this,
-    // tapping "Change email" while a request is still in flight leaves it
-    // running: it resolves later and snaps the UI back to the OTP-entry step
-    // (with a fresh cooldown) right after the user had already backed out of it.
     private var submitJob: Job? = null
 
-    // Cap length at the RFC 5321 maximum so a pasted block of text can't sail
-    // past canSubmit's "contains @ and a dot" check unbounded.
     fun onEmail(v: String) = _state.update { it.copy(email = v.take(254), error = null) }
+    fun onFullName(v: String) = _state.update { it.copy(fullName = v.take(100), error = null) }
+    fun onPhone(v: String) = _state.update { it.copy(phone = v.take(20), error = null) }
     fun onOtpCode(v: String) = _state.update { it.copy(otpCode = v, error = null) }
 
     fun startSignUp() = _state.update {
@@ -71,13 +77,6 @@ class LoginViewModel @Inject constructor(
         it.copy(step = AuthStep.Email, intent = AuthIntent.LogIn, error = null)
     }
 
-    /**
-     * Google sign-in. The backend route exists (`POST /auth/google`) but stays
-     * disabled until GOOGLE_CLIENT_ID is configured, so the button that calls
-     * this is hidden behind BuildConfig.GOOGLE_SIGN_IN_ENABLED. When the OAuth
-     * client is issued, this is where the ID token from the Credential Manager
-     * flow gets exchanged; until then it must never be reachable.
-     */
     fun continueWithGoogle() = _state.update {
         it.copy(error = "Google sign-in isn't available yet. Use your email for now.")
     }
@@ -118,10 +117,14 @@ class LoginViewModel @Inject constructor(
     }
 
     private fun sendOtp() {
-        val email = _state.value.email
+        val s = _state.value
         _state.update { it.copy(loading = true, error = null) }
         submitJob = viewModelScope.launch {
-            when (val result = repo.requestOtp(email)) {
+            when (val result = repo.requestOtp(
+                email = s.email,
+                fullName = s.fullName.takeIf { it.isNotBlank() },
+                phone = s.phone.takeIf { it.isNotBlank() },
+            )) {
                 is ApiResult.Success -> {
                     _state.update { it.copy(loading = false, otpSent = true, step = AuthStep.Otp) }
                     startCooldown()
@@ -135,20 +138,20 @@ class LoginViewModel @Inject constructor(
         val s = _state.value
         _state.update { it.copy(loading = true, error = null) }
         submitJob = viewModelScope.launch {
-            when (val result = repo.verifyOtp(s.email, s.otpCode)) {
-                // SessionManager flips to Authenticated and the root graph swaps to
-                // the app — but this ViewModel instance can resurface after a later
-                // sign-out, so reset it fully rather than leaving loading=true and
-                // the submitted state stuck forever. We still capture the new-device
-                // / verified flags before resetting so the banner/gate can read them.
+            when (val result = repo.verifyOtp(
+                email = s.email,
+                code = s.otpCode,
+                fullName = s.fullName.takeIf { it.isNotBlank() },
+                phone = s.phone.takeIf { it.isNotBlank() },
+            )) {
                 is ApiResult.Success -> {
                     val outcome = result.data
                     cooldownJob?.cancel()
                     _state.update {
-                        // Keep the email so a post-sign-out login doesn't make the
-                        // same person re-type it (A13).
                         LoginUiState(
                             email = it.email,
+                            fullName = it.fullName,
+                            phone = it.phone,
                             isNewDevice = outcome.isNewDevice,
                             isVerified = outcome.isVerified,
                         )

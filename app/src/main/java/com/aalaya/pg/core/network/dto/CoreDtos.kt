@@ -168,4 +168,7 @@ data class UpdateResidentRequest(
     val fullName: String? = null,
     val phone: String? = null,
     val planKind: String? = null,
+    val rentPaise: Long? = null,
+    val depositPaise: Long? = null,
 )
+

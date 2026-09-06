@@ -50,7 +50,6 @@ import com.aalaya.pg.ui.theme.HamsaTheme
  * Who's paid up and who owes. Cash is confirmed at the desk, then marked paid
  * from the resident's detail screen — this is the branch-wide view onto that.
  */
-private const val ALL_ROOMS = "__all_rooms__"
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -74,19 +73,12 @@ fun PaymentsScreen(
     val searching = normalized.isNotEmpty()
     val floorChosen = state.selectedFloor != null
     val floorKeys = Floors.keysOf(state.rooms.map { it.number })
-    val roomsOnFloor = state.rooms.filter {
-        state.selectedFloor == null ||
-            state.selectedFloor == Floors.ALL ||
-            Floors.keyOf(it.number) == state.selectedFloor
-    }
-
     val matching = state.dues
         .filter { due ->
             state.selectedFloor == null ||
                 state.selectedFloor == Floors.ALL ||
                 (due.roomNumber != null && Floors.keyOf(due.roomNumber) == state.selectedFloor)
         }
-        .filter { due -> state.selectedRoomId == null || due.roomId == state.selectedRoomId }
         .filter {
             normalized.isEmpty() ||
                 it.resident.fullName.lowercase().contains(normalized) ||
@@ -150,24 +142,7 @@ fun PaymentsScreen(
             }
         }
 
-        // Step 3 — only once a floor is chosen.
-        if (branchPicked && floorChosen) {
-            item("room") {
-                HamsaDropdown(
-                    label = "Room",
-                    options = listOf(ALL_ROOMS) + roomsOnFloor.map { it.id },
-                    selected = state.selectedRoomId ?: ALL_ROOMS,
-                    optionLabel = { id ->
-                        if (id == ALL_ROOMS) {
-                            "All rooms (${roomsOnFloor.size})"
-                        } else {
-                            "Room ${roomsOnFloor.firstOrNull { r -> r.id == id }?.number.orEmpty()}"
-                        }
-                    },
-                    onSelect = { viewModel.selectRoom(it.takeIf { id -> id != ALL_ROOMS }) },
-                )
-            }
-        }
+
 
         when {
             state.isOwner && state.branches.isEmpty() -> item("no-branches") {

@@ -80,6 +80,7 @@ private fun StaffPinGate(
         unlocked -> MainScaffold(
             session = session,
             snackbarMessages = viewModel.snackbarMessages,
+            pinStore = pinStore,
             onSignOut = viewModel::signOut,
         )
         hasPin == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

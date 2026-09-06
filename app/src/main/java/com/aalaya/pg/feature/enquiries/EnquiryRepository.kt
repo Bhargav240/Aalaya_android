@@ -22,12 +22,13 @@ class EnquiryRepository @Inject constructor(
         executor.execute { api.setEnquiryStatus(id, EnquiryStatusRequest(status)) }.toUnit()
 
     /** Send an enquiry for a listing using the authenticated explorer session. */
-    suspend fun enquire(branchId: String, note: String?): ApiResult<Unit> =
+    suspend fun enquire(branchId: String, note: String?, phone: String? = null): ApiResult<Unit> =
         executor.execute {
             api.enquire(
                 branchId,
                 EnquireRequest(
                     note = note?.trim()?.ifBlank { null },
+                    phone = phone?.trim()?.ifBlank { null },
                 ),
             )
         }.toUnit()

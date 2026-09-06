@@ -246,13 +246,13 @@ fun TenantHomeScreen(
                 }
             }
 
-            // ── 5. Quick actions ────────────────────────────────────────
+            // ── 5. Quick Actions ────────────────────────────────────────
             // Only destinations that already exist. There is deliberately no
             // "Pay rent": rent is recorded by staff in cash, so the app cannot
             // take a payment and must not imply that it can.
             item("quick-actions") {
                 Column(verticalArrangement = Arrangement.spacedBy(HamsaTheme.spacing.sm)) {
-                    SectionHead("Quick actions")
+                    SectionHead("Quick Actions")
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(HamsaTheme.spacing.sm),

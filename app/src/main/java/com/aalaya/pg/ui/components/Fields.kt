@@ -3,6 +3,8 @@ package com.aalaya.pg.ui.components
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -181,29 +183,50 @@ fun OtpCodeField(
     val colors = HamsaTheme.colors
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(HamsaTheme.radii.md)
-    val borderColor = if (focused) colors.brand else colors.border
 
     BasicTextField(
         value = value,
         onValueChange = { v -> onValueChange(v.filter(Char::isDigit).take(length)) },
         singleLine = true,
         interactionSource = interaction,
-        textStyle = HamsaTheme.type.displaySmall.copy(
-            color = colors.textPrimary,
-            textAlign = TextAlign.Center,
-            letterSpacing = 8.sp,
-        ),
-        cursorBrush = SolidColor(colors.brand),
+        cursorBrush = SolidColor(Color.Transparent),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-        modifier = modifier
-            .fillMaxWidth()
-            .then(if (focused) Modifier.border(3.dp, colors.brandSubtle, shape) else Modifier)
-            .background(colors.surface, shape)
-            .border(1.dp, borderColor, shape)
-            .padding(horizontal = 14.dp, vertical = 13.dp),
-        decorationBox = { inner ->
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { inner() }
+        modifier = modifier.fillMaxWidth(),
+        decorationBox = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                repeat(length) { index ->
+                    val char = value.getOrNull(index)?.toString() ?: ""
+                    val isCurrent = focused && (index == value.length || (index == length - 1 && value.length == length))
+                    val shape = RoundedCornerShape(12.dp)
+                    val borderColor = when {
+                        isCurrent -> colors.brand
+                        char.isNotEmpty() -> colors.brandSubtle
+                        else -> colors.border
+                    }
+                    val borderWidth = if (isCurrent) 2.dp else 1.dp
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
+                            .background(colors.surface, shape)
+                            .border(borderWidth, borderColor, shape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = char,
+                            style = HamsaTheme.type.headlineMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                            ),
+                            color = colors.textPrimary,
+                        )
+                    }
+                }
+            }
         },
     )
 }

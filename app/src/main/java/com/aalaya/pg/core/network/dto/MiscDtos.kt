@@ -52,6 +52,7 @@ data class AuditEntryDto(
     val entityType: String? = null,
     val entityId: String? = null,
     val actorId: String? = null,
+    val actorName: String? = null,
     val atEpoch: Long,
 )
 
@@ -68,3 +69,4 @@ data class HealthDto(
     val dbReady: Boolean,
     val requestId: String? = null,
 )
+

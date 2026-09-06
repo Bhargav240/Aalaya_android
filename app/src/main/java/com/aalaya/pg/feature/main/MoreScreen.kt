@@ -11,6 +11,7 @@ import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.PersonAdd
@@ -66,6 +67,7 @@ fun MoreScreen(
         }
     }
     val support = listOf(
+        MoreLink("App PIN", "Update your 4-digit security PIN", Routes.CHANGE_PIN, Icons.Outlined.Lock),
         MoreLink("Contact us", "Get help from the Aalaya team", Routes.CONTACT_US, Icons.Outlined.MailOutline),
         MoreLink("Privacy policy", "How we protect your information", Routes.PRIVACY_POLICY, Icons.Outlined.Shield),
         MoreLink("Help & FAQs", "Running your PG day to day", Routes.HELP, Icons.Outlined.HelpOutline),

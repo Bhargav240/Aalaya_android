@@ -88,6 +88,8 @@ fun ResidentDetailScreen(
     var editName by remember { mutableStateOf("") }
     var editPhone by remember { mutableStateOf("") }
     var editPlan by remember { mutableStateOf<PlanKind?>(null) }
+    var editRent by remember { mutableStateOf("") }
+    var editDeposit by remember { mutableStateOf("") }
     var showDelete by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.openUri) {
@@ -135,6 +137,8 @@ fun ResidentDetailScreen(
                                     editName = state.ledger?.fullName.orEmpty()
                                     editPhone = ""
                                     editPlan = null
+                                    editRent = ""
+                                    editDeposit = ""
                                     showEdit = true
                                 },
                                 modifier = Modifier.weight(1f),
@@ -258,10 +262,15 @@ fun ResidentDetailScreen(
         FormDialog(
             title = "Edit resident",
             confirmText = "Save",
-            confirmEnabled = editName.isNotBlank() || editPhone.isNotBlank() || editPlan != null,
+            confirmEnabled = editName.isNotBlank() || editPhone.isNotBlank() || editPlan != null
+                || editRent.isNotBlank() || editDeposit.isNotBlank(),
             saving = state.editing,
             error = state.editError,
-            onConfirm = { viewModel.editResident(editName, editPhone, editPlan) { showEdit = false } },
+            onConfirm = {
+                viewModel.editResident(
+                    editName, editPhone, editPlan, editRent, editDeposit,
+                ) { showEdit = false }
+            },
             onDismiss = { showEdit = false },
         ) {
             Text(
@@ -277,6 +286,20 @@ fun ResidentDetailScreen(
                 onValueChange = { editPhone = it },
                 label = "Phone (leave blank to keep)",
                 keyboardType = KeyboardType.Phone,
+            )
+            Spacer(Modifier.height(HamsaTheme.spacing.xs))
+            HamsaTextField(
+                value = editRent,
+                onValueChange = { editRent = it },
+                label = "Monthly rent ₹ (leave blank to keep)",
+                keyboardType = KeyboardType.Number,
+            )
+            Spacer(Modifier.height(HamsaTheme.spacing.xs))
+            HamsaTextField(
+                value = editDeposit,
+                onValueChange = { editDeposit = it },
+                label = "Deposit ₹ (leave blank to keep)",
+                keyboardType = KeyboardType.Number,
             )
             Spacer(Modifier.height(HamsaTheme.spacing.xs))
             Text("Plan", style = HamsaTheme.type.labelLarge, color = HamsaTheme.colors.textSecondary)
@@ -382,3 +405,4 @@ private fun Cell(label: String, value: String) {
         Text(value, style = HamsaTheme.type.labelLarge, color = HamsaTheme.colors.textPrimary)
     }
 }
+

@@ -24,8 +24,8 @@ android {
         debug {
             // Android Emulator's special host alias for the development
             // machine. A literal 127.0.0.1 would point at the emulator itself.
-            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080/api/v1/\"")
-            buildConfigField("String", "API_ROOT_URL", "\"http://10.0.2.2:8080/\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://counties-routes-reviewed-confidentiality.trycloudflare.com/api/v1/\"")
+            buildConfigField("String", "API_ROOT_URL", "\"https://counties-routes-reviewed-confidentiality.trycloudflare.com/\"")
             // Google sign-in stays hidden until a Google Cloud OAuth client
             // exists. The backend refuses /auth/google without GOOGLE_CLIENT_ID
             // ("GOOGLE_CLIENT_ID missing; /auth/google disabled" at boot), and

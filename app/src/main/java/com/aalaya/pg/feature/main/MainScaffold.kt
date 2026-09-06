@@ -1,6 +1,30 @@
 package com.aalaya.pg.feature.main
 
+import com.aalaya.pg.core.data.PinStore
+import com.aalaya.pg.feature.auth.PinScreen
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+
 import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
@@ -83,8 +107,10 @@ import kotlinx.coroutines.flow.SharedFlow
 fun MainScaffold(
     session: UserSession,
     snackbarMessages: SharedFlow<String>,
+    pinStore: PinStore? = null,
     onSignOut: () -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
     val navController = rememberNavController()
     val tabs = tabsForRole(session.role)
     val canManage = session.role.canManage
@@ -169,28 +195,65 @@ fun MainScaffold(
         },
         bottomBar = {
             if (isTab) {
-                Column {
-                    HorizontalDivider(color = colors.border)
-                    NavigationBar(
-                        containerColor = colors.surface,
-                        tonalElevation = 0.dp,
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(colors.surface)
+                        .navigationBarsPadding(),
+                ) {
+                    HorizontalDivider(color = colors.border, thickness = 1.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         val current = backStack?.destination
                         tabs.forEach { tab ->
                             val selected = current?.hierarchy?.any { it.route == tab.route } == true
-                            NavigationBarItem(
-                                selected = selected,
-                                onClick = { navigateToTab(tab.route) },
-                                icon = { Icon(tab.icon, contentDescription = tab.label) },
-                                label = { Text(tab.label, style = HamsaTheme.type.labelSmall) },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = colors.brand,
-                                    selectedTextColor = colors.brand,
-                                    indicatorColor = colors.brandSubtle,
-                                    unselectedIconColor = colors.textTertiary,
-                                    unselectedTextColor = colors.textTertiary,
-                                ),
-                            )
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = { navigateToTab(tab.route) },
+                                    ),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(width = 46.dp, height = 26.dp)
+                                        .background(
+                                            if (selected) colors.brandSubtle else Color.Transparent,
+                                            shape = RoundedCornerShape(13.dp),
+                                        ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = tab.icon,
+                                        contentDescription = tab.label,
+                                        tint = if (selected) colors.brand else colors.textTertiary,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                                Spacer(Modifier.height(3.dp))
+                                Text(
+                                    text = tab.label,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Clip,
+                                    style = HamsaTheme.type.labelSmall.copy(
+                                        fontSize = 10.5.sp,
+                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                                        letterSpacing = (-0.2).sp,
+                                    ),
+                                    color = if (selected) colors.brand else colors.textTertiary,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
                         }
                     }
                 }
@@ -258,7 +321,6 @@ fun MainScaffold(
                     onOpenBranch = { id, name ->
                         push("${Routes.BRANCH_DETAIL}/$id?name=${Uri.encode(name)}")
                     },
-                    onAddBranch = { push(Routes.CREATE_BRANCH) },
                 )
             }
 
@@ -475,6 +537,20 @@ fun MainScaffold(
             }
             composable(Routes.CONTACT_US) { ContactUsScreen(onBack = back) }
             composable(Routes.PRIVACY_POLICY) { PrivacyPolicyScreen(onBack = back) }
+            composable(Routes.CHANGE_PIN) {
+                if (pinStore != null) {
+                    PinScreen(
+                        pinStore = pinStore,
+                        title = "Set your app PIN",
+                        onUnlocked = back,
+                        onSubmitPin = { newPin ->
+                            scope.launch {
+                                pinStore.setPin(newPin)
+                            }
+                        },
+                    )
+                }
+            }
         }
     }
 }
