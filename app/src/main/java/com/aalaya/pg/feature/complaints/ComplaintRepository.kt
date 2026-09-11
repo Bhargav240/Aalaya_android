@@ -28,7 +28,7 @@ class ComplaintRepository @Inject constructor(
         cached = cache.read(CACHE_KEY, ListSerializer(ComplaintDto.serializer()), MAX_AGE_MS) ?: cached
     }
 
-    suspend fun list(): ApiResult<List<ComplaintDto>> = executor.execute { api.complaints() }.also { result ->
+    suspend fun list(branchId: String? = null): ApiResult<List<ComplaintDto>> = executor.execute { api.complaints(branchId) }.also { result ->
         if (result is ApiResult.Success) {
             cached = result.data
             cache.write(CACHE_KEY, ListSerializer(ComplaintDto.serializer()), result.data)

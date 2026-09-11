@@ -115,7 +115,7 @@ fun PaymentsScreen(
         }
 
         // Same shared branch context as Home and Occupancy.
-        if (state.isOwner && state.branches.isNotEmpty()) {
+        if (state.branches.size > 1 || (state.isOwner && state.branches.isNotEmpty())) {
             item("branch") {
                 ScopeChip(
                     label = state.selectedBranchName.ifBlank { state.branches.first().name },

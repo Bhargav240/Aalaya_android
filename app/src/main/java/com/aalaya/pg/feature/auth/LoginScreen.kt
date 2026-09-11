@@ -30,16 +30,6 @@ import com.aalaya.pg.ui.components.PrimaryButton
 import com.aalaya.pg.ui.components.SecondaryButton
 import com.aalaya.pg.ui.theme.HamsaTheme
 
-/**
- * The unauthenticated surface, in three panels: a welcome that offers both
- * doors, an email field, then the code emailed to it.
- *
- * Sign-up and log-in are the same two backend calls — an unknown email is
- * provisioned as a prospect on first request — so the panels differ only in
- * wording. That is not cosmetic: someone tapping "Sign up" must not be greeted
- * with "Welcome back", and a prospective tenant must not be told that
- * residents join by invitation only, because they don't have to.
- */
 @Composable
 fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -96,6 +86,7 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
                     onValueChange = viewModel::onFullName,
                     label = "Full name",
                     placeholder = "Your full name",
+                    errorText = if (state.showNameError) state.nameError else null,
                 )
                 Spacer(Modifier.height(HamsaTheme.spacing.md))
                 HamsaTextField(
@@ -104,6 +95,7 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
                     label = "Phone number",
                     placeholder = "10-digit mobile number",
                     keyboardType = KeyboardType.Phone,
+                    errorText = if (state.showPhoneError) state.phoneError else null,
                 )
                 Spacer(Modifier.height(HamsaTheme.spacing.md))
             }
@@ -113,6 +105,7 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
                 label = "Email address",
                 placeholder = "you@example.com",
                 keyboardType = KeyboardType.Email,
+                errorText = if (state.showEmailError) state.emailError else null,
             )
         } else {
             OtpCodeField(
@@ -157,16 +150,24 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
             }
         }
 
-        state.error?.let {
+        state.error?.let { err ->
             Spacer(Modifier.height(HamsaTheme.spacing.md))
-            Text(it, style = HamsaTheme.type.bodySmall, color = colors.errorFg)
+            Text(err, style = HamsaTheme.type.bodySmall, color = colors.errorFg)
+            if (state.intent == AuthIntent.LogIn && !state.otpSent) {
+                Spacer(Modifier.height(HamsaTheme.spacing.sm))
+                SecondaryButton(
+                    text = "Register / Create Account",
+                    onClick = viewModel::startSignUp,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
 
         Spacer(Modifier.height(HamsaTheme.spacing.xxl))
         PrimaryButton(
             text = if (!state.otpSent) "Send code" else "Verify",
             onClick = viewModel::submit,
-            enabled = state.canSubmit,
+            enabled = !state.loading && if (state.otpSent) state.otpCode.length == 6 else true,
             loading = state.loading,
             modifier = Modifier.fillMaxWidth(),
         )

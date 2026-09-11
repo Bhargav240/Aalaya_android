@@ -23,7 +23,7 @@ class LoginViewModelTest {
 
     @Test
     fun `email OTP login sends then verifies the exact account`() = runTest(mainDispatcherRule.dispatcher) {
-        coEvery { repository.requestOtp("Tenant@Example.com") } returns ApiResult.Success(Unit)
+        coEvery { repository.requestOtp("Tenant@Example.com", null, null, false) } returns ApiResult.Success(Unit)
         coEvery { repository.verifyOtp("Tenant@Example.com", "123456") } returns
             ApiResult.Success(AuthRepository.AuthOutcome(isVerified = true, isNewDevice = false))
         val viewModel = LoginViewModel(repository)
@@ -39,7 +39,7 @@ class LoginViewModelTest {
         viewModel.submit()
         runCurrent()
 
-        coVerify(exactly = 1) { repository.requestOtp("Tenant@Example.com") }
+        coVerify(exactly = 1) { repository.requestOtp("Tenant@Example.com", null, null, false) }
         coVerify(exactly = 1) { repository.verifyOtp("Tenant@Example.com", "123456") }
         assertFalse(viewModel.state.value.loading)
         assertFalse(viewModel.state.value.otpSent)

@@ -46,6 +46,7 @@ class AuthRepository @Inject constructor(
         email: String,
         fullName: String? = null,
         phone: String? = null,
+        isSignup: Boolean? = null,
     ): ApiResult<Unit> =
         when (val r = executor.execute {
             api.requestEmailOtp(
@@ -53,6 +54,7 @@ class AuthRepository @Inject constructor(
                     email = normalizedEmail(email),
                     fullName = fullName?.trim()?.takeIf { it.isNotEmpty() },
                     phone = phone?.trim()?.takeIf { it.isNotEmpty() },
+                    isSignup = isSignup,
                 )
             )
         }) {

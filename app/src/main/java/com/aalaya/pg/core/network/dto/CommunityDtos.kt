@@ -50,6 +50,9 @@ data class ComplaintDto(
     val isBusinessLevel: Boolean,
     val createdEpoch: Long = 0,
     val updatedEpoch: Long = 0,
+    val tenantName: String? = null,
+    val floorNumber: String? = null,
+    val roomNumber: String? = null,
 )
 
 @Serializable

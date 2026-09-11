@@ -7,13 +7,14 @@ import org.junit.Test
 class ComplaintStateTest {
     @Test
     fun `transitions mirror the backend state machine`() {
-        assertEquals(listOf(ComplaintState.Assigned, ComplaintState.InProgress), ComplaintState.Open.allowedTransitions())
-        assertEquals(listOf(ComplaintState.InProgress), ComplaintState.Assigned.allowedTransitions())
-        assertEquals(listOf(ComplaintState.Resolved), ComplaintState.InProgress.allowedTransitions())
+        assertEquals(listOf(ComplaintState.Assigned, ComplaintState.InProgress, ComplaintState.Closed), ComplaintState.Open.allowedTransitions())
+        assertEquals(listOf(ComplaintState.InProgress, ComplaintState.Closed), ComplaintState.Assigned.allowedTransitions())
+        assertTrue(ComplaintState.InProgress.allowedTransitions().contains(ComplaintState.Resolved))
+        assertTrue(ComplaintState.InProgress.allowedTransitions().contains(ComplaintState.Closed))
         // Resolved can be closed or bounced back to in-progress.
         assertTrue(ComplaintState.Resolved.allowedTransitions().contains(ComplaintState.Closed))
         assertTrue(ComplaintState.Resolved.allowedTransitions().contains(ComplaintState.InProgress))
-        assertEquals(emptyList<ComplaintState>(), ComplaintState.Closed.allowedTransitions())
+        assertTrue(ComplaintState.Closed.allowedTransitions().contains(ComplaintState.InProgress))
     }
 
     @Test

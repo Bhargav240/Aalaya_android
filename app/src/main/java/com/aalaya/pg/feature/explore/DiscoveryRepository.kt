@@ -21,6 +21,8 @@ data class Listing(
     val bedsAvailable: Int?,
     val startingPricePaise: Long?,
     val distanceKm: Double?,
+    val lat: Double? = null,
+    val lng: Double? = null,
 )
 
 private fun ListingDto.toUi() = Listing(
@@ -34,6 +36,8 @@ private fun ListingDto.toUi() = Listing(
     bedsAvailable = bedsAvailable,
     startingPricePaise = startingPricePaise,
     distanceKm = distanceKm,
+    lat = lat,
+    lng = lng,
 )
 
 @Singleton

@@ -107,8 +107,7 @@ class OccupancyViewModel @Inject constructor(
                         _state.update { it.copy(loading = false, error = r.error.message) }
                 }
             }
-            // A manager is pinned to their own branch — never a choice.
-            if (isManager) {
+            if (isManager && branchContext.branches.value.size <= 1 && branchContext.selected.value == null) {
                 val name = branchContext.branches.value
                     .firstOrNull { it.id == session!!.branchId }?.name.orEmpty()
                 branchContext.select(session!!.branchId!!, name)

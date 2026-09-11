@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aalaya.pg.core.common.ApiResult
 import com.aalaya.pg.core.common.SnackbarManager
+import com.aalaya.pg.core.data.BranchContext
 import com.aalaya.pg.core.domain.model.ComplaintState
+import com.aalaya.pg.core.network.dto.BranchDto
 import com.aalaya.pg.core.network.dto.ComplaintDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,11 +23,14 @@ data class ComplaintsUiState(
     val saving: Boolean = false,
     val saveError: String? = null,
     val transitioningId: String? = null,
+    val branches: List<BranchDto> = emptyList(),
+    val scopedBranchId: String? = null,
 )
 
 @HiltViewModel
 class ComplaintsViewModel @Inject constructor(
     private val repo: ComplaintRepository,
+    private val branchContext: BranchContext,
     private val snackbar: SnackbarManager,
 ) : ViewModel() {
 
@@ -33,6 +38,8 @@ class ComplaintsViewModel @Inject constructor(
         ComplaintsUiState(
             loading = repo.cachedItems() == null,
             items = repo.cachedItems().orEmpty(),
+            branches = branchContext.branches.value,
+            scopedBranchId = branchContext.selected.value?.id,
         ),
     )
     val state: StateFlow<ComplaintsUiState> = _state.asStateFlow()
@@ -43,14 +50,44 @@ class ComplaintsViewModel @Inject constructor(
             repo.cachedItems()?.let { cached ->
                 _state.update { it.copy(loading = false, items = cached) }
             }
-            refresh()
+        }
+        observeBranches()
+        observeSelectedBranch()
+    }
+
+    private fun observeBranches() {
+        viewModelScope.launch {
+            branchContext.branches.collect { list ->
+                _state.update { it.copy(branches = list) }
+            }
         }
     }
 
+    private fun observeSelectedBranch() {
+        viewModelScope.launch {
+            branchContext.selected.collect { selection ->
+                _state.update { it.copy(scopedBranchId = selection?.id) }
+                // Auto-refresh complaints whenever branch selection changes
+                loadComplaints(selection?.id)
+            }
+        }
+    }
+
+    fun scopeToBranch(branchId: String) {
+        if (_state.value.scopedBranchId == branchId) return
+        val name = branchContext.branches.value
+            .firstOrNull { it.id == branchId }?.name.orEmpty()
+        branchContext.select(branchId, name)
+    }
+
     fun refresh() {
+        loadComplaints(_state.value.scopedBranchId)
+    }
+
+    private fun loadComplaints(branchId: String?) {
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
-            when (val r = repo.list()) {
+            when (val r = repo.list(branchId)) {
                 is ApiResult.Success -> _state.update { it.copy(loading = false, items = r.data) }
                 is ApiResult.Failure -> _state.update { it.copy(loading = false, error = r.error.message) }
             }
@@ -60,8 +97,9 @@ class ComplaintsViewModel @Inject constructor(
     fun raise(title: String, description: String, businessLevel: Boolean, onDone: () -> Unit) {
         if (title.isBlank() || _state.value.saving) return
         _state.update { it.copy(saving = true, saveError = null) }
+        val branchId = if (businessLevel) null else _state.value.scopedBranchId
         viewModelScope.launch {
-            when (val r = repo.raise(title, description, businessLevel, null)) {
+            when (val r = repo.raise(title, description, businessLevel, branchId)) {
                 is ApiResult.Success -> {
                     _state.update { it.copy(saving = false) }
                     onDone(); refresh()

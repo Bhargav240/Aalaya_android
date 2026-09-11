@@ -105,7 +105,7 @@ class PaymentsViewModel @Inject constructor(
                         _state.update { it.copy(loading = false, error = r.error.message) }
                 }
             }
-            if (isManager) {
+            if (isManager && branchContext.branches.value.size <= 1 && branchContext.selected.value == null) {
                 val name = branchContext.branches.value
                     .firstOrNull { it.id == session!!.branchId }?.name.orEmpty()
                 branchContext.select(session!!.branchId!!, name)

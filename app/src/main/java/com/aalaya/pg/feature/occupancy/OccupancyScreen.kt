@@ -203,7 +203,7 @@ fun OccupancyScreen(
 
         // Branch is app-wide context, not a per-screen filter — the same chip
         // appears on Home, and changing it here changes it everywhere.
-        if (state.isOwner && state.branches.isNotEmpty()) {
+        if (state.branches.size > 1 || (state.isOwner && state.branches.isNotEmpty())) {
             item("branch") {
                 ScopeChip(
                     label = state.selectedBranchName.ifBlank { state.branches.first().name },

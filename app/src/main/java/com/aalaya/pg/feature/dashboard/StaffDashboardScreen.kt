@@ -96,7 +96,7 @@ fun StaffDashboardScreen(
 
                 // Owners pick which branch every figure below refers to;
                 // managers are pinned to their own and get no chip at all.
-                if (isOwner && state.branches.isNotEmpty()) {
+                if (state.branches.size > 1 || (isOwner && state.branches.isNotEmpty())) {
                     val scopedName = state.scopedBranchId
                         ?.let { id -> state.branches.firstOrNull { it.id == id }?.name }
                     ScopeChip(

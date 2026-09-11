@@ -152,9 +152,7 @@ class DashboardViewModel @Inject constructor(
             }
 
             try {
-                val branchesDeferred = if (isOwner) {
-                    async { branchRepo.branches() }
-                } else null
+                val branchesDeferred = async { branchRepo.branches() }
 
                 val approvalsDeferred = if (isOwner) {
                     async { approvalRepo.pending() }
@@ -243,14 +241,13 @@ class DashboardViewModel @Inject constructor(
      */
     private fun resolveScope(role: Role?, sessionBranchId: String?): RoomScope {
         val state = _state.value
-        if (role == Role.Manager && sessionBranchId != null) {
-            return RoomScope(listOf(sessionBranchId), "Your branch")
-        }
         state.scopedBranchId?.let { id ->
             val name = state.branches.firstOrNull { it.id == id }?.name ?: "Selected branch"
             return RoomScope(listOf(id), name)
         }
-        if (role?.canApprove != true) return RoomScope(emptyList(), "No branches")
+        if (role == Role.Manager && sessionBranchId != null) {
+            return RoomScope(listOf(sessionBranchId), "Your branch")
+        }
         val first = state.branches.firstOrNull()
             ?: return RoomScope(emptyList(), "No branches")
         return RoomScope(listOf(first.id), first.name)

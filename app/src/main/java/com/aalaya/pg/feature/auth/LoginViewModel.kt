@@ -19,12 +19,60 @@ private const val RESEND_COOLDOWN_SECS = 30
 enum class AuthStep { Welcome, Email, Otp }
 
 /**
- * Why the person is here. The backend makes no distinction — an unknown email
- * that asks for a code is auto-provisioned as a prospect, a known one just
- * signs in — but the wording has to match what the person believes they are
- * doing, so "Sign up" must not greet them with "Welcome back".
+ * Why the person is here.
  */
 enum class AuthIntent { SignUp, LogIn }
+
+object AuthValidators {
+    // Name contains only alphabets (with optional spaces between words) with a minimum of 3 characters
+    private val NAME_REGEX = Regex("^[a-zA-Z]+(?:\\s[a-zA-Z]+)*$")
+    // Valid 10-digit Indian mobile number starting with 6-9
+    private val PHONE_REGEX = Regex("^[6-9]\\d{9}$")
+    // Valid general email format (not restricted to Gmail)
+    private val EMAIL_REGEX = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+
+    fun isValidName(name: String): Boolean {
+        val trimmed = name.trim()
+        return trimmed.length >= 3 && trimmed.matches(NAME_REGEX)
+    }
+
+    fun isValidPhone(phone: String): Boolean {
+        val digits = phone.trim().filter { it.isDigit() }
+        return digits.matches(PHONE_REGEX)
+    }
+
+    fun isValidEmail(email: String): Boolean {
+        return email.trim().matches(EMAIL_REGEX)
+    }
+
+    fun nameError(name: String): String? {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return "Full name is required."
+        if (trimmed.length < 3) return "Name must contain only alphabets with a minimum of 3 characters."
+        if (!trimmed.all { it.isLetter() || it.isWhitespace() }) return "Name must contain only alphabets."
+        if (!trimmed.matches(NAME_REGEX)) return "Name must contain only alphabets."
+        return null
+    }
+
+    fun phoneError(phone: String): String? {
+        val trimmed = phone.trim()
+        val digits = trimmed.filter { it.isDigit() }
+        if (trimmed.isEmpty()) return "Phone number is required."
+        if (!digits.matches(PHONE_REGEX)) {
+            return "Enter a valid 10-digit Indian mobile number starting with 6–9."
+        }
+        return null
+    }
+
+    fun emailError(email: String): String? {
+        val trimmed = email.trim()
+        if (trimmed.isEmpty()) return "Email address is required."
+        if (!isValidEmail(trimmed)) {
+            return "Enter a valid email address (e.g. name@example.com)."
+        }
+        return null
+    }
+}
 
 data class LoginUiState(
     val step: AuthStep = AuthStep.Welcome,
@@ -39,16 +87,35 @@ data class LoginUiState(
     val error: String? = null,
     val isNewDevice: Boolean = false,
     val isVerified: Boolean = true,
+    val fullNameTouched: Boolean = false,
+    val phoneTouched: Boolean = false,
+    val emailTouched: Boolean = false,
+    val attemptedSubmit: Boolean = false,
 ) {
+    val nameError: String? get() = AuthValidators.nameError(fullName)
+    val phoneError: String? get() = AuthValidators.phoneError(phone)
+    val emailError: String? get() = AuthValidators.emailError(email)
+
+    val showNameError: Boolean
+        get() = intent == AuthIntent.SignUp && (attemptedSubmit || (fullNameTouched && fullName.isNotEmpty())) && nameError != null
+
+    val showPhoneError: Boolean
+        get() = intent == AuthIntent.SignUp && (attemptedSubmit || (phoneTouched && phone.isNotEmpty())) && phoneError != null
+
+    val showEmailError: Boolean
+        get() = (attemptedSubmit || (emailTouched && email.isNotEmpty())) && emailError != null
+
+    val isFormValid: Boolean
+        get() = if (intent == AuthIntent.SignUp) {
+            nameError == null && phoneError == null && emailError == null
+        } else {
+            emailError == null
+        }
+
     val canSubmit: Boolean
         get() {
             if (otpSent) return otpCode.length == 6
-            val emailValid = email.contains('@') && email.substringAfter('@').contains('.')
-            if (intent == AuthIntent.SignUp) {
-                val phoneDigits = phone.filter { it.isDigit() }
-                return emailValid && (phone.isBlank() || phoneDigits.length >= 10)
-            }
-            return emailValid
+            return isFormValid
         }
 }
 
@@ -61,20 +128,46 @@ class LoginViewModel @Inject constructor(
     val state: StateFlow<LoginUiState> = _state.asStateFlow()
 
     private var cooldownJob: Job? = null
-
     private var submitJob: Job? = null
 
-    fun onEmail(v: String) = _state.update { it.copy(email = v.take(254), error = null) }
-    fun onFullName(v: String) = _state.update { it.copy(fullName = v.take(100), error = null) }
-    fun onPhone(v: String) = _state.update { it.copy(phone = v.take(20), error = null) }
-    fun onOtpCode(v: String) = _state.update { it.copy(otpCode = v, error = null) }
+    fun onEmail(v: String) = _state.update {
+        it.copy(email = v.take(254), emailTouched = true, error = null)
+    }
+
+    fun onFullName(v: String) = _state.update {
+        it.copy(fullName = v.take(100), fullNameTouched = true, error = null)
+    }
+
+    fun onPhone(v: String) = _state.update {
+        it.copy(phone = v.take(20), phoneTouched = true, error = null)
+    }
+
+    fun onOtpCode(v: String) = _state.update {
+        it.copy(otpCode = v, error = null)
+    }
 
     fun startSignUp() = _state.update {
-        it.copy(step = AuthStep.Email, intent = AuthIntent.SignUp, error = null)
+        it.copy(
+            step = AuthStep.Email,
+            intent = AuthIntent.SignUp,
+            fullNameTouched = false,
+            phoneTouched = false,
+            emailTouched = false,
+            attemptedSubmit = false,
+            error = null,
+        )
     }
 
     fun startLogIn() = _state.update {
-        it.copy(step = AuthStep.Email, intent = AuthIntent.LogIn, error = null)
+        it.copy(
+            step = AuthStep.Email,
+            intent = AuthIntent.LogIn,
+            fullNameTouched = false,
+            phoneTouched = false,
+            emailTouched = false,
+            attemptedSubmit = false,
+            error = null,
+        )
     }
 
     fun continueWithGoogle() = _state.update {
@@ -86,7 +179,17 @@ class LoginViewModel @Inject constructor(
         cooldownJob?.cancel()
         submitJob?.cancel()
         _state.update {
-            it.copy(step = AuthStep.Welcome, otpSent = false, otpCode = "", loading = false, error = null)
+            it.copy(
+                step = AuthStep.Welcome,
+                otpSent = false,
+                otpCode = "",
+                loading = false,
+                error = null,
+                fullNameTouched = false,
+                phoneTouched = false,
+                emailTouched = false,
+                attemptedSubmit = false,
+            )
         }
     }
 
@@ -112,8 +215,16 @@ class LoginViewModel @Inject constructor(
 
     fun submit() {
         val s = _state.value
-        if (!s.canSubmit || s.loading) return
-        if (!s.otpSent) sendOtp() else verifyOtp()
+        if (s.loading) return
+        if (s.otpSent) {
+            if (s.otpCode.length == 6) verifyOtp()
+            return
+        }
+        if (!s.isFormValid) {
+            _state.update { it.copy(attemptedSubmit = true) }
+            return
+        }
+        sendOtp()
     }
 
     private fun sendOtp() {
@@ -121,9 +232,10 @@ class LoginViewModel @Inject constructor(
         _state.update { it.copy(loading = true, error = null) }
         submitJob = viewModelScope.launch {
             when (val result = repo.requestOtp(
-                email = s.email,
-                fullName = s.fullName.takeIf { it.isNotBlank() },
-                phone = s.phone.takeIf { it.isNotBlank() },
+                email = s.email.trim(),
+                fullName = s.fullName.trim().takeIf { it.isNotBlank() },
+                phone = s.phone.trim().takeIf { it.isNotBlank() },
+                isSignup = s.intent == AuthIntent.SignUp,
             )) {
                 is ApiResult.Success -> {
                     _state.update { it.copy(loading = false, otpSent = true, step = AuthStep.Otp) }
@@ -139,10 +251,10 @@ class LoginViewModel @Inject constructor(
         _state.update { it.copy(loading = true, error = null) }
         submitJob = viewModelScope.launch {
             when (val result = repo.verifyOtp(
-                email = s.email,
-                code = s.otpCode,
-                fullName = s.fullName.takeIf { it.isNotBlank() },
-                phone = s.phone.takeIf { it.isNotBlank() },
+                email = s.email.trim(),
+                code = s.otpCode.trim(),
+                fullName = s.fullName.trim().takeIf { it.isNotBlank() },
+                phone = s.phone.trim().takeIf { it.isNotBlank() },
             )) {
                 is ApiResult.Success -> {
                     val outcome = result.data

@@ -42,11 +42,11 @@ enum class ComplaintState(val wire: String, val label: String) {
 
     /** Valid next states — mirrors ComplaintState::can_transition_to on the server. */
     fun allowedTransitions(): List<ComplaintState> = when (this) {
-        Open -> listOf(Assigned, InProgress)
-        Assigned -> listOf(InProgress)
-        InProgress -> listOf(Resolved)
+        Open -> listOf(Assigned, InProgress, Closed)
+        Assigned -> listOf(InProgress, Closed)
+        InProgress -> listOf(Resolved, Closed)
         Resolved -> listOf(Closed, InProgress)
-        Closed -> emptyList()
+        Closed -> listOf(InProgress)
     }
 
     companion object {

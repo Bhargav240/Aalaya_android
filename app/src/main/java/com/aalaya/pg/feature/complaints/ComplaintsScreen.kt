@@ -48,6 +48,7 @@ import com.aalaya.pg.ui.components.IconTone
 import com.aalaya.pg.ui.components.LoadingState
 import com.aalaya.pg.ui.components.PrimaryButton
 import com.aalaya.pg.ui.components.SecondaryButton
+import com.aalaya.pg.ui.components.ScopeChip
 import com.aalaya.pg.ui.components.StatusChip
 import com.aalaya.pg.ui.components.toneForComplaint
 import com.aalaya.pg.ui.components.toneForStatus
@@ -93,6 +94,19 @@ fun ComplaintsScreen(
             }
         },
     ) {
+        if (canManage && state.branches.size > 1) {
+            item("branch-scope") {
+                val scopedName = state.scopedBranchId
+                    ?.let { id -> state.branches.firstOrNull { it.id == id }?.name }
+                ScopeChip(
+                    label = scopedName ?: state.branches.first().name,
+                    options = state.branches.map { it.id },
+                    optionLabel = { id -> state.branches.firstOrNull { it.id == id }?.name.orEmpty() },
+                    onSelect = viewModel::scopeToBranch,
+                )
+            }
+        }
+
         when {
             state.loading && state.items.isEmpty() -> item("loading") { LoadingState() }
             state.error != null && state.items.isEmpty() -> item("error") {
@@ -181,14 +195,20 @@ private fun ComplaintCard(
     onTransition: (ComplaintState) -> Unit,
 ) {
     val current = ComplaintState.fromWire(c.state)
-    // Collapsed by default, and only one card is ever open. A full stepper per
-    // complaint turned a list of five into a page of scrolling, and the status
-    // chip already answers the question most of the time — the stages only
-    // matter for the one complaint you are actually chasing.
     val chevronTurn by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
         label = "complaintChevron",
     )
+
+    val tenantInfo = buildList {
+        c.tenantName?.takeIf { it.isNotBlank() }?.let { add(it) }
+        c.floorNumber?.takeIf { it.isNotBlank() }?.let {
+            add(if (it.startsWith("Floor", ignoreCase = true) || it.contains("floor", ignoreCase = true)) it else "Floor $it")
+        }
+        c.roomNumber?.takeIf { it.isNotBlank() }?.let {
+            add(if (it.startsWith("Room", ignoreCase = true)) it else "Room $it")
+        }
+    }.joinToString(" · ")
 
     HamsaCard(
         modifier = Modifier.fillMaxWidth().animateContentSize(),
@@ -212,6 +232,13 @@ private fun ComplaintCard(
                     style = HamsaTheme.type.titleMedium,
                     color = HamsaTheme.colors.textPrimary,
                 )
+                if (tenantInfo.isNotBlank()) {
+                    Text(
+                        tenantInfo,
+                        style = HamsaTheme.type.bodySmall,
+                        color = HamsaTheme.colors.brand,
+                    )
+                }
                 if (c.isBusinessLevel) {
                     Text(
                         "Business-level",
@@ -253,20 +280,24 @@ private fun ComplaintCard(
                 )
             }
 
-            if (canManage && current.allowedTransitions().isNotEmpty()) {
+            if (canManage) {
                 Spacer(Modifier.height(HamsaTheme.spacing.md))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(HamsaTheme.spacing.sm),
                     verticalArrangement = Arrangement.spacedBy(HamsaTheme.spacing.sm),
                 ) {
-                    current.allowedTransitions().forEach { to ->
-                        SecondaryButton(
-                            text = "Move to ${to.label}",
-                            onClick = { onTransition(to) },
-                            enabled = !transitioning,
-                            size = ButtonSize.Small,
-                        )
-                    }
+                    SecondaryButton(
+                        text = "Move to In Progress",
+                        onClick = { onTransition(ComplaintState.InProgress) },
+                        enabled = !transitioning && current != ComplaintState.InProgress,
+                        size = ButtonSize.Small,
+                    )
+                    SecondaryButton(
+                        text = "Move to Closed",
+                        onClick = { onTransition(ComplaintState.Closed) },
+                        enabled = !transitioning && current != ComplaintState.Closed,
+                        size = ButtonSize.Small,
+                    )
                 }
             }
         }

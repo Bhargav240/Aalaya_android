@@ -246,7 +246,7 @@ interface ApiService {
 
     // ── Complaints ────────────────────────────────────────────────────────────
     @GET("complaints")
-    suspend fun complaints(): List<ComplaintDto>
+    suspend fun complaints(@Query("branch_id") branchId: String? = null): List<ComplaintDto>
 
     @POST("complaints")
     suspend fun raiseComplaint(@Body body: RaiseComplaintRequest): IdResponse

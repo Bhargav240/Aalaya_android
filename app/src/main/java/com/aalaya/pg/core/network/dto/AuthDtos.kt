@@ -18,6 +18,7 @@ data class RequestEmailOtpRequest(
     val email: String,
     val fullName: String? = null,
     val phone: String? = null,
+    val isSignup: Boolean? = null,
 )
 
 @Serializable
